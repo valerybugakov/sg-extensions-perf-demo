@@ -6,5 +6,7 @@ module.exports = {
     path: path.resolve(__dirname, "dist"),
     filename: "index.js",
     library: "extensionThree",
+    libraryTarget: "commonjs",
+    globalObject: "self",
   },
 };

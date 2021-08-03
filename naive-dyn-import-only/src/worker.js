@@ -12,15 +12,16 @@ globalThis.require = () => {
 };
 
 for (const id of extensionIDs) {
-  //   const exports = {};
-  //   self.exports = exports;
-  //   self.module = { exports };
+  const exports = {};
+  self.exports = exports;
+  self.module = { exports };
   import(`./extensions/${id}/dist/index.js`)
     .then((module) =>
       console.log({
         module: module,
         // TODO: import() only works with export, not module.exports
         activate: module.activate,
+        exports,
       })
     )
     .catch((error) => console.error(error));
