@@ -13,3 +13,5 @@ Medium-to-long-term migration plan:
 - import-scripts-only architecture -> dyn-import-with-fallback architecture (while migrating extensions) -> naive-dyn-import-only (w/ graceful error handling for incompatible extensions)
 
 TODO: UML Sequence diagram to demonstrate what the problem and solution look like.
+
+- legacy and new extensions will have to have different export mechanisms (`module.exports = { activate }` vs `export activate`), but can have the same import mechanism (`global.require('sourcegraph')`)
