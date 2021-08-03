@@ -1,3 +1,4 @@
-console.log('hey')
+"use-strict";
+console.log("hey");
 
-new Worker('worker.js')
+new Worker("worker.js");

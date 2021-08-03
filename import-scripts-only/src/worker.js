@@ -1,3 +1,4 @@
+"use strict";
 console.log("worker init");
 
 const extensionIDs = ["1", "2", "3"];
@@ -11,4 +12,8 @@ globalThis.require = () => {
   };
 };
 
+const exports = {};
+self.exports = exports;
+self.module = { exports };
 importScripts(...extensionIDs.map((id) => `./extensions/${id}/dist/index.js`));
+console.log({ exports });
