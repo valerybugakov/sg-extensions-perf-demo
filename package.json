@@ -1,0 +1,21 @@
+{
+  "name": "sg-extensions-perf-demo",
+  "version": "1.0.0",
+  "description": "NOTE: This is a scratchpad for my thoughts on the issue. Move these to RFC 411 once they're coherent.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "import-scripts-only": "node ./import-scripts-only/serve.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tjkandala/sg-extensions-perf-demo.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/tjkandala/sg-extensions-perf-demo/issues"
+  },
+  "homepage": "https://github.com/tjkandala/sg-extensions-perf-demo#readme"
+}
