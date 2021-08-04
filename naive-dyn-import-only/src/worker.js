@@ -51,7 +51,7 @@ Promise.all(
     import(`./extensions/${id}/dist/index.js`)
       .then((module) => {
         // queueMicrotask(() => console.log(`microtask: ${id}`));
-        // setTimeout(() => console.log(`timeout: ${id}`), 0);
+        setTimeout(() => console.log(`timeout: ${id}`), 0);
 
         const extensionExports = self.module.exports;
 
