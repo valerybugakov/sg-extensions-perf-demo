@@ -5,6 +5,9 @@ module.exports = {
   output: {
     path: path.resolve(__dirname, "dist"),
     filename: "index.js",
-    library: "extensionTwo",
+    library: {
+      type: "umd",
+    },
+    globalObject: "self",
   },
 };

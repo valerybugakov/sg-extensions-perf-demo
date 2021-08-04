@@ -15,3 +15,7 @@ Medium-to-long-term migration plan:
 TODO: UML Sequence diagram to demonstrate what the problem and solution look like.
 
 - legacy and new extensions will have to have different export mechanisms (`module.exports = { activate }` vs `export activate`), but can have the same import mechanism (`global.require('sourcegraph')`)
+
+- think about how to port `sourcegraph.app.log` without synchronous extension loading. two options come to mind:
+  - 1. in `"sourcegraph"` module, add `setContext` function to `module.exports`. when called with id, sets that property on the API instance passed to the extension (create new API instance to pass to extension on each call of `globalThis.require`)
+  - 2. include extension id from manifest in compiled output.

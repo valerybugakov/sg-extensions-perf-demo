@@ -2,6 +2,6 @@ parcelRequire=function(e,r,t,n){var i,o="function"==typeof parcelRequire&&parcel
 var global = arguments[3];
 var r=arguments[3];module.exports=r.require("sourcegraph");
 },{}],"Focm":[function(require,module,exports) {
-"use strict";var e=o(require("sourcegraph"));function o(e){return e&&e.__esModule?e:{default:e}}console.log("importing extension 3",{sourcegraph:e.default}),e.default.app.log("hello from extension 3");
+"use strict";Object.defineProperty(exports,"__esModule",{value:!0}),exports.activate=o;var e=t(require("sourcegraph"));function t(e){return e&&e.__esModule?e:{default:e}}function o(){e.default.app.log("extension 3 activated")}console.log("importing extension 3",{sourcegraph:e.default}),e.default.app.log("hello from extension 3");
 },{"sourcegraph":"vSrR"}]},{},["Focm"], null)
 //# sourceMappingURL=/index.js.map
