@@ -20,6 +20,26 @@ function createAPI() {
   };
 }
 
+// TODO: import() with importScripts() fallback.
+// - should we try to avoid user agent detection?
+//    - how could we? try import() and see if it isn't implemented?
+// - how to handle out of date extensions (incompatible w/ strict mode)?
+
+/** Tests whether `import()` is implemented in this context */
+const checkDynamicImport = async () => {
+  try {
+    await import("data:text/javascript;charset=utf-8,");
+    return true;
+  } catch (error) {
+    console.error(error);
+    return false;
+  }
+};
+
+checkDynamicImport().then((isImplemented) =>
+  console.log("is import() implemented:", isImplemented)
+);
+
 // queue of API contexts
 const initContextQueue = [];
 
@@ -46,19 +66,19 @@ self.module = { exports };
 // as opposed to
 //   extension execution: 123---
 // promise callback call: ---123
-Promise.all(
-  extensionIDs.map((id) =>
-    import(`./extensions/${id}/dist/index.js`)
-      .then((module) => {
-        // queueMicrotask(() => console.log(`microtask: ${id}`));
-        setTimeout(() => console.log(`timeout: ${id}`), 0);
+// Promise.all(
+//   extensionIDs.map((id) =>
+//     import(`./extensions/${id}/dist/index.js`)
+//       .then((module) => {
+//         // queueMicrotask(() => console.log(`microtask: ${id}`));
+//         setTimeout(() => console.log(`timeout: ${id}`), 0);
 
-        const extensionExports = self.module.exports;
+//         const extensionExports = self.module.exports;
 
-        initContextQueue.shift()(id);
+//         initContextQueue.shift()(id);
 
-        extensionExports.activate();
-      })
-      .catch((error) => console.log(error))
-  )
-);
+//         extensionExports.activate();
+//       })
+//       .catch((error) => console.log(error))
+//   )
+// );
