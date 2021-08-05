@@ -23,7 +23,7 @@ function createAPI() {
 // TODO: import() with importScripts() fallback.
 // - should we try to avoid user agent detection?
 //    - how could we? try import() and see if it isn't implemented?
-// - how to handle out of date extensions (incompatible w/ strict mode)?
+// - how to handle out of date extensions (incompatible w/ strict mode) when import() IS supported?
 
 /**
  * Tests whether `import()` is implemented in this context.
@@ -41,48 +41,30 @@ const supportsDynamicImportPromise = (async () => {
   }
 })();
 
-// queue of API contexts
-const initContextQueue = [];
+async function main() {
+  // This is where we would determine which extensions to activate
+  const extensionExports = await loadExtensions(extensionIDs);
+  console.log({ extensionExports });
 
-globalThis.require = () => {
-  // TODO: determine best way to limit extensions to importing "sourcegraph" once
-  const { api, initContext } = createAPI();
+  for (const [, { activate }] of extensionExports) {
+    activate();
+  }
+}
 
-  initContextQueue.push(initContext);
+main();
 
-  return api;
-};
-
-const exports = {};
-self.exports = exports;
-// self.module = new Proxy(
-//   { exports },
-//   {
-//     get: (target, prop, receiver) => {
-//       console.log({ target, prop, receiver });
-//       return {
-//         activate: () => console.log("proxy activate"),
-//       };
-//     },
-//     set: (obj, prop, value) => {
-//       console.log({ obj, prop, value });
-//       return true;
-//     },
-//   }
-// );
-self.module = { exports };
-
-loadExtensions(extensionIDs);
-
+/**
+ * To be called with IDs of extensions that have not yet been activated.
+ */
 async function loadExtensions(ids) {
   const supportsDynamicImport = await supportsDynamicImportPromise;
 
   console.log({ supportsDynamicImport });
 
   if (supportsDynamicImport) {
-    await importLoader(ids);
+    return await importLoader(ids);
   } else {
-    importScriptsLoader(ids);
+    return importScriptsLoader(ids);
   }
 }
 
@@ -100,44 +82,82 @@ async function loadExtensions(ids) {
 //   extension execution: 123---
 // promise callback call: ---123
 async function importLoader(ids) {
+  // Map<Index, { activate:ActivateFunction, deactivate?: deactivateFunction }>
+  const extensionExportsByID = new Map();
+
+  // queue of API context setters
+  const initContextQueue = [];
+
+  globalThis.require = () => {
+    // TODO: determine best way to limit extensions to importing "sourcegraph" once
+    const { api, initContext } = createAPI();
+
+    // We can't assume index in `importLoader()` since extensions
+    // can be executed out of order. Fortunately, the Promise callbacks
+    // are called in order of extension execution, so a simple queue solves the problem.
+    initContextQueue.push(initContext);
+
+    return api;
+  };
+
+  const exports = {};
+  self.exports = exports;
+  self.module = { exports };
+
   await Promise.all(
     ids.map((id) =>
       import(`./extensions/${id}/dist/index.js`)
-        .then((module) => {
-          // queueMicrotask(() => console.log(`microtask: ${id}`));
-          setTimeout(() => console.log(`timeout: ${id}`), 0);
-
+        .then(() => {
           const extensionExports = self.module.exports;
 
           initContextQueue.shift()(id);
 
-          extensionExports.activate();
+          extensionExportsByID.set(id, {
+            activate: extensionExports.activate,
+            deactivate: extensionExports.deactivate,
+          });
         })
         .catch((error) => console.log(`error importing ${id}`, error))
     )
   );
+
+  return extensionExportsByID;
 }
 
 function importScriptsLoader(ids) {
+  // Map<Index, { activate:ActivateFunction, deactivate?: deactivateFunction }>
+  const extensionExportsByID = new Map();
+
   let nextImportIndex = 0;
+  let erroredExtensions = 0;
+  const contexts = [];
+
+  globalThis.require = () => {
+    // TODO: determine best way to limit extensions to importing "sourcegraph" once
+    const { api, initContext } = createAPI();
+
+    // What if an uploaded extension doesn't export activate()??
+    // Alert the user that one of the imported extensions is not valid and should be disabled?
+    // That's easy since the user can use their judgement to efficiently determine the bad extension
+    // through trial and error (they'd probably disable something like "123/asbdbs" before "sourcegraph/git-extras").
+    contexts[nextImportIndex] = initContext;
+
+    return api;
+  };
 
   const exports = {};
   self.exports = exports;
   self.module = new Proxy(
     { exports },
     {
-      get: (target, prop, receiver) => {
-        console.log({ target, prop, receiver });
-        return {
-          activate: () => console.log("proxy activate"),
-        };
-      },
       set: (obj, prop, value) => {
-        console.log({ obj, prop, value });
         if (typeof value === "object" && "activate" in value) {
-          // We assume that it is a successful import if the extension was able to export its activate function.
-          nextImportIndex++;
+          extensionExportsByID.set(ids[nextImportIndex], {
+            activate: value.activate,
+            deactivate: value.deactivate,
+          });
         }
+        nextImportIndex++;
         return true;
       },
     }
@@ -147,10 +167,24 @@ function importScriptsLoader(ids) {
     try {
       const restIds = ids.slice(nextImportIndex);
       importScripts(...restIds.map((id) => `./extensions/${id}/dist/index.js`));
+      // TODO: The condition would never break if an extension doesn't export anything, so we break explicitly
+      // after importing all extensions.
+      // This loop is meant for unhandled errors, not bad extensions that don't follow our contract (must export `activate`).
+      // TODO: add check for activate export in prepublish, possible lint rule. add to extension generator.
+      break;
     } catch (error) {
-      console.log("error importing scripts", { nextImportIndex, error });
+      erroredExtensions++;
       nextImportIndex++;
     }
   }
-  console.log({ initContextQueue });
+
+  // We assume that it is a successful import if the extension was able to export its activate function.
+  if (extensionExportsByID.size !== ids.length - erroredExtensions) {
+    // some extension didn't export `activate`, so we can't associate extensions'
+    // ids with their `activate` and `deactivate` functions, which we usually do by index.
+    // user has to fix this. This is a rare issue and should be fixed at the registry level.
+    console.log("not eq!");
+  }
+
+  return extensionExportsByID;
 }
