@@ -43,12 +43,7 @@ const supportsDynamicImportPromise = (async () => {
 
 async function main() {
   // This is where we would determine which extensions to activate
-  const extensionExports = await loadExtensions(extensionIDs);
-  console.log({ extensionExports });
-
-  for (const [, { activate }] of extensionExports) {
-    activate();
-  }
+  await loadExtensions(extensionIDs);
 }
 
 main();
@@ -62,14 +57,16 @@ async function loadExtensions(ids) {
   console.log({ supportsDynamicImport });
 
   if (supportsDynamicImport) {
-    return await importLoader(ids);
+    await importLoader(ids);
   } else {
-    return importScriptsLoader(ids);
+    importScriptsLoader(ids);
   }
 }
 
 // LOADER TYPE:
-// - returns Promise for map of extension id -> activate + deactivate functions.
+// - returns Promise for map of extension id -> activate + deactivate functions?
+// - loaders should activate extensions themselves so they have control over scheduling,
+// which is different based on the type of loader.
 
 // Even when all extensions are returned at the same time, seems to be:
 //   extension execution: 1-2-3----
@@ -104,6 +101,8 @@ async function importLoader(ids) {
   self.exports = exports;
   self.module = { exports };
 
+  const erroredIDs = [];
+
   await Promise.all(
     ids.map((id) =>
       import(`./extensions/${id}/dist/index.js`)
@@ -117,9 +116,26 @@ async function importLoader(ids) {
             deactivate: extensionExports.deactivate,
           });
         })
-        .catch((error) => console.log(`error importing ${id}`, error))
+        .catch((error) => {
+          console.log(`error importing ${id}`, error);
+          erroredIDs.push(id);
+        })
     )
   );
+
+  for (const [, { activate }] of extensionExportsByID) {
+    activate();
+  }
+
+  if (erroredIDs.length > 0) {
+    // NEXT UP: what do we do with extensions here? send them to importScriptsLoader?
+    // Unfortunately, `importScripts()` cannot load scripts in parallel in some
+    // contexts in which `import()` is defined (like Chrome desktop), so we should
+    // leave some room for main thread messages before initiating importScripts loading.
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    // importScriptsLoader, then merge extensionDeactivate Maps?
+    importScriptsLoader(erroredIDs);
+  }
 
   return extensionExportsByID;
 }
@@ -184,6 +200,11 @@ function importScriptsLoader(ids) {
     // ids with their `activate` and `deactivate` functions, which we usually do by index.
     // user has to fix this. This is a rare issue and should be fixed at the registry level.
     console.log("not eq!");
+  }
+
+  // If everything has gone well up to this point, we should be able to initialize context!
+  for (const [, { activate }] of extensionExportsByID) {
+    activate();
   }
 
   return extensionExportsByID;
