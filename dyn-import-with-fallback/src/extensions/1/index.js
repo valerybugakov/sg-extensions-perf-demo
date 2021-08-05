@@ -1,6 +1,7 @@
 import sourcegraph from "sourcegraph";
 
-console.log("importing extension 1", {
-  sourcegraph,
-});
-sourcegraph.app.log("hello from extension 1");
+console.log("importing extension one");
+
+export function activate() {
+    sourcegraph.app.log("activating extension one");
+}
