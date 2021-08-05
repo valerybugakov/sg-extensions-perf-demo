@@ -25,8 +25,13 @@ function createAPI() {
 //    - how could we? try import() and see if it isn't implemented?
 // - how to handle out of date extensions (incompatible w/ strict mode)?
 
-/** Tests whether `import()` is implemented in this context */
-const checkDynamicImport = async () => {
+/**
+ * Tests whether `import()` is implemented in this context.
+ *
+ * Known contexts in which this returns `false`:
+ * - Web Worker on Firefox
+ *  */
+const supportsDynamicImport = (async () => {
   try {
     await import("data:text/javascript;charset=utf-8,");
     return true;
@@ -34,9 +39,9 @@ const checkDynamicImport = async () => {
     console.error(error);
     return false;
   }
-};
+})();
 
-checkDynamicImport().then((isImplemented) =>
+supportsDynamicImport.then((isImplemented) =>
   console.log("is import() implemented:", isImplemented)
 );
 
