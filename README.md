@@ -1,5 +1,3 @@
-NOTE: This is a scratchpad for my thoughts on the issue. Move these to RFC 411 once they're coherent.
-
 Initial thoughts
 
 - mock interaction from the main thread as well. this is essential to making the extension host interactive AND initializing quickly. will solve the linked line jump issue.
